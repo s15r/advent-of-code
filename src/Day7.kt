@@ -1,9 +1,14 @@
 fun main() {
-    check(3749L == Day7(streamLines("day7test.txt")).sumTrueTestValues())
-    println(Day7(streamLines("day7.txt")).sumTrueTestValues())
+    check(3749L == Day7(streamLines("day7test.txt"), part1Operators).sumTrueTestValues())
+    println(Day7(streamLines("day7.txt"), part1Operators).sumTrueTestValues()) // 5837374519342
+    check(11387L == Day7(streamLines("day7test.txt"), part2Operators).sumTrueTestValues())
+    println(Day7(streamLines("day7.txt"), part2Operators).sumTrueTestValues())  // 492383931650959
 }
 
-class Day7(lines: Sequence<String>) {
+val part1Operators = listOf(Operator.PLUS, Operator.MULTIPLY)
+val part2Operators = listOf(Operator.PLUS, Operator.MULTIPLY, Operator.CONCAT)
+
+class Day7(lines: Sequence<String>, private val supportedOperators: List<Operator>) {
     private val equations = lines.map { it.toEquation() }
 
     fun sumTrueTestValues(): Long {
@@ -23,12 +28,7 @@ class Day7(lines: Sequence<String>) {
             .fold(CarryResult(listOf(initialValue))) { carry, operand ->
                 CarryResult(
                     carry.combinedResults.flatMap { combinedResult ->
-                        Operator.entries.map {
-                            when (it) {
-                                Operator.PLUS -> combinedResult + operand
-                                Operator.MULTIPLY -> combinedResult * operand
-                            }
-                        }.toList()
+                        supportedOperators.map { it.applyOperator(combinedResult, operand) }.toList()
                     }
                 )
             }.combinedResults.firstOrNull { it == validTestResult } ?: 0
@@ -37,11 +37,18 @@ class Day7(lines: Sequence<String>) {
 }
 
 data class CarryResult(val combinedResults: List<Long>)
-
 data class Equation(val testValue: Long, val operands: List<Long>)
+
 enum class Operator {
     PLUS,
-    MULTIPLY
+    MULTIPLY,
+    CONCAT;
+
+    fun applyOperator(combinedResult: Long, operand: Long) = when (this) {
+        PLUS -> combinedResult + operand
+        MULTIPLY -> combinedResult * operand
+        CONCAT -> (combinedResult.toString() + operand).toLong()
+    }
 }
 
 fun String.toEquation() =
