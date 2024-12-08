@@ -6,3 +6,4 @@ import kotlin.streams.asSequence
 fun openFile(name: String) = Path("src/$name")
 fun readLines(name: String) = openFile(name).readLines()
 fun streamLines(name: String) = Files.lines(openFile(name)).asSequence()
+fun Any?.println() = println(this)
