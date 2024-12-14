@@ -1,6 +1,7 @@
 fun main() {
     check(12 == Day14(roomWidth = 11, roomHeight = 7, input = readLines("day14test.txt")).part1())
     Day14(roomWidth = 101, roomHeight = 103, readLines("day14.txt")).part1().println()
+    Day14(roomWidth = 101, roomHeight = 103, readLines("day14.txt")).part2().println()
 }
 
 
@@ -22,6 +23,40 @@ class Day14(val roomWidth: Int, val roomHeight: Int, input: List<String>) {
                 if (it.key != 0) it.value.size
                 else null
             }.reduce { acc, p -> acc * p }
+    }
+
+    fun part2(): Int {
+        (1..10000).map { seconds ->
+            val result = robots.map {
+                it.move(seconds)
+            }
+            val image = (0..<roomHeight).map {
+                " ".repeat(roomWidth).toCharArray()
+            }.toMutableList()
+
+            result.forEach {
+                image[it.y][it.x] = 'X'
+            }
+            val longLines = image.map { line ->
+                val lineChars = line.filterIndexed { index, char ->
+                    if (index == line.size - 1) false
+                    else if (char == 'X' && (line[index + 1] == 'X')) true
+                    else false
+                }.count()
+                lineChars
+            }.count { it > 5 }
+
+            if (longLines > 5) {
+                image.forEach {
+                    it.forEach { print(it) }
+                    print("\n")
+                }
+                "".println()
+                "--------------^ $seconds".println()
+                "".println()
+            }
+        }
+        return 0
     }
 
     private fun Coordinate.quadrant(): Int {
