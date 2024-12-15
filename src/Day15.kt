@@ -1,10 +1,12 @@
 fun main() {
-    check( 10092 == Day15("day15test.txt").part1())
-    Day15("day15.txt").part1().println()
+    check(10092 == Day15("day15test.txt", isPart2 = false).solve())
+    Day15("day15.txt", isPart2 = false).solve().println()
+    check(9021 == Day15("day15test.txt", isPart2 = true).solve())
+    Day15("day15.txt", isPart2 = true).solve().println()
 }
 
 
-class Day15(filename: String) {
+class Day15(filename: String, private val isPart2: Boolean) {
     private val grid: MutableList<MutableList<Char>>
     private val moves: List<Char>
 
@@ -14,38 +16,60 @@ class Day15(filename: String) {
         this.moves = moves
     }
 
-    fun part1(): Int {
+    fun solve(): Int {
         var position = grid.mapIndexedNotNull { y, line ->
             val x = line.mapIndexedNotNull { x, c -> if (c == '@') x else null }.firstOrNull()
             if (x != null) Pair(x, y) else null
         }.first()
 
         moves.forEach { move ->
-            position = moveAndPushRecursive(position, move).second
+            if (moveAndPushRecursive(position, move, true).first) {
+                position = moveAndPushRecursive(position, move, false).second
+            }
         }
         return grid.gpsSum()
     }
 
     private fun moveAndPushRecursive(
         position: Pair<Int, Int>,
-        move: Char
+        move: Char,
+        dryRun: Boolean
     ): Pair<Boolean, Pair<Int, Int>> { // wasMoved -> newPosition
         val nextPoint = position.nextPoint(move)
-        return if (grid[nextPoint.second][nextPoint.first] == '.') {
-            grid.swap(position, nextPoint)
+        val nextPointValue = grid[nextPoint.second][nextPoint.first]
+        return if (nextPointValue == '.') {
+            if (!dryRun) grid.swap(position, nextPoint)
             true to nextPoint
-        } else if (grid[nextPoint.second][nextPoint.first] == 'O') {
-            if (moveAndPushRecursive(nextPoint, move).first) {
-                grid.swap(position, nextPoint)
+        } else if (nextPointValue == 'O') {
+            if (moveAndPushRecursive(nextPoint, move, dryRun).first) {
+                if (!dryRun) grid.swap(position, nextPoint)
                 true to nextPoint
             } else {
                 // can't push
                 false to position
             }
-        } else if (grid[nextPoint.second][nextPoint.first] == '#') {
+        } else if (nextPointValue in listOf('[', ']')) {
+            val otherNextPoint = when (nextPointValue) {
+                '[' -> nextPoint.copy(first = nextPoint.first + 1, nextPoint.second)
+                ']' -> nextPoint.copy(first = nextPoint.first - 1, nextPoint.second)
+                else -> error("Unknown other value $nextPointValue")
+            }
+            if (dryRun && (move == '>' || move == '<')) { // dryrun side way with two blocks
+                moveAndPushRecursive(otherNextPoint, move, true).first to nextPoint
+            } else if (moveAndPushRecursive(otherNextPoint, move, dryRun).first &&
+                moveAndPushRecursive(nextPoint, move, dryRun).first
+            ) {
+                if (!dryRun) grid.swap(position, nextPoint)
+                true to nextPoint
+            } else {
+                // can't push
+                false to position
+            }
+
+        } else if (nextPointValue == '#') {
             // can't move
             false to position
-        } else error("Unknown grid value ${grid[nextPoint.second][nextPoint.first]}")
+        } else error("Unknown grid value $nextPointValue")
     }
 
     private fun Pair<Int, Int>.nextPoint(move: Char): Pair<Int, Int> {
@@ -67,7 +91,7 @@ class Day15(filename: String) {
 
     private fun MutableList<MutableList<Char>>.gpsSum(): Int {
         return this.mapIndexed { y, line ->
-            val xSum = line.mapIndexedNotNull { x, c -> if (c == 'O') x + y * 100 else null }.sum()
+            val xSum = line.mapIndexedNotNull { x, c -> if (c == 'O' || c == '[') x + y * 100 else null }.sum()
             xSum
         }.sum()
     }
@@ -81,12 +105,23 @@ class Day15(filename: String) {
                 isGrid = false
             }
             if (isGrid) {
-                gridLines.add(line.toCharArray().toMutableList())
+                if (!isPart2) {
+                    gridLines.add(line.toCharArray().toMutableList())
+                } else {
+                    gridLines.add(line.flatMap { c ->
+                        when (c) {
+                            '.' -> listOf('.', '.')
+                            '#' -> listOf('#', '#')
+                            'O' -> listOf('[', ']')
+                            '@' -> listOf('@', '.')
+                            else -> error("Unknown grid value $c")
+                        }
+                    }.toCharArray().toMutableList())
+                }
             } else {
                 moves.addAll(line.toCharArray().toList())
             }
         }
         return Pair(gridLines, moves)
     }
-
 }
